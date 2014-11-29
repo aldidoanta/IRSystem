@@ -7,8 +7,9 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Set;
+
+import core.DocumentContainer;
 
 public class Indexer {
 	
@@ -25,13 +26,7 @@ public class Indexer {
 	 
 	//containers for the parsing process
 	//DOCUMENT CONTAINERS
-	static ArrayList<String> titleList = new ArrayList<String>(); //list of doc title
-	static ArrayList<String> authorList = new ArrayList<String>(); //list of doc author
-	static ArrayList<String> contentList = new ArrayList<String>(); //list of doc content
-	static ArrayList<Double> doclengthList = new ArrayList<Double>(); //list of document length
 	static ArrayList<String> stopwordList = new ArrayList<String>(); //list of stop words
-	public static ArrayList<ArrayList<String>> wordList = new ArrayList<ArrayList<String>>(); //container for the word token in each doc/query
-	static ArrayList<Double> IDFList = new ArrayList<Double>(); //list of IDF (for each word)
 	//QUERY CONTAINERS
 	static ArrayList<String> queryList = new ArrayList<String>(); //list of queries
 	static ArrayList<Double> querylengthList = new ArrayList<Double>(); //list of query length
@@ -48,17 +43,13 @@ public class Indexer {
 	static boolean useDocumentIDF = false;
 	static boolean useDocumentNorm = false; //use normalization?
 	
-	/*DATA STRUCTURE FOR INVERTED FILE*/
-	//key-value for TF entry (Raw TF and TF)
-	static HashMap<String, ArrayList<InvFileTF>> TFList = new HashMap<String, ArrayList<InvFileTF>>();
-	
 	/**
 	 * parses the document file, extracting the required info from each document
 	 * @param path file path
 	 * @param doc_or_query code to distinguish between document or query
 	 * @throws IOException
 	 */
-	public static void readFile(String path, int doc_or_query) throws IOException{
+	public static void readFile(String path, int doc_or_query, DocumentContainer dc) throws IOException{
 		
 		//used for parsing process
 		int idx = 0;
@@ -74,9 +65,9 @@ public class Indexer {
 						switch (line.charAt(1)) {
 							case 'I':
 								idx = Integer.parseInt(line.substring(3)); //assign current doc number
-								titleList.add("");
-								authorList.add("");
-								contentList.add("");
+								dc.titleList.add("");
+								dc.authorList.add("");
+								dc.contentList.add("");
 								break;
 							case 'T':
 								status = 'T';
@@ -121,29 +112,29 @@ public class Indexer {
 						switch (status) {
 							case 'T':
 								if(firstline){
-									titleList.set(idx-1,curr_line); //add a new title elmt
+									dc.titleList.set(idx-1,curr_line); //add a new title elmt
 									firstline = false;
 								}
 								else{
-									titleList.set(idx-1, titleList.get(idx-1)+" "+curr_line); //append to existing elmt
+									dc.titleList.set(idx-1, dc.titleList.get(idx-1)+" "+curr_line); //append to existing elmt
 								}
 								break;
 							case 'A':
 								if(firstline){
-									authorList.set(idx-1,curr_line); //add a new author elmt
+									dc.authorList.set(idx-1,curr_line); //add a new author elmt
 									firstline = false;
 								}
 								else{
-									authorList.set(idx-1, authorList.get(idx-1)+" "+curr_line); //append to existing elmt
+									dc.authorList.set(idx-1, dc.authorList.get(idx-1)+" "+curr_line); //append to existing elmt
 								}
 								break;
 							case 'W':
 								if(firstline){
-									contentList.set(idx-1,curr_line); //add a new content elmt
+									dc.contentList.set(idx-1,curr_line); //add a new content elmt
 									firstline = false;
 								}
 								else{
-									contentList.set(idx-1, contentList.get(idx-1)+" "+curr_line); //append to existing elmt
+									dc.contentList.set(idx-1, dc.contentList.get(idx-1)+" "+curr_line); //append to existing elmt
 								}
 								break;
 		
@@ -180,7 +171,7 @@ public class Indexer {
 	 * removes stop words in contentList based on a stop word list
 	 * @throws IOException
 	 */
-	public static void removeDocStopWord() throws IOException{
+	public static void removeDocStopWord(DocumentContainer dc) throws IOException{
 		//open the stop word file
 		BufferedReader br = new BufferedReader(new FileReader("res/stopword/1.txt"));
 		for(String line = br.readLine(); line != null; line = br.readLine()){
@@ -196,12 +187,12 @@ public class Indexer {
 		br.close();
 		
 		//remove stop words from contentList
-		for(int i = 0; i < contentList.size(); i++){
-			String newcontent = contentList.get(i);	
+		for(int i = 0; i < dc.contentList.size(); i++){
+			String newcontent = dc.contentList.get(i);	
 			for(String str_stopword : stopwordList){
 				newcontent = newcontent.replaceAll("\\b"+str_stopword+"\\b(?!-)", ""); //hyphen-separated words will be counted as one word
 			}
-			contentList.set(i, newcontent);
+			dc.contentList.set(i, newcontent);
 		}
 		
 		//delete the contents of stopwordList, freeing up resource
@@ -243,11 +234,11 @@ public class Indexer {
 	 * lists all the words in the contentList, then finds the matching documents
 	 * <p>this method also calculates raw TF for each word in each matching document
 	 */
-	public static void listDocumentWord(){
+	public static void listDocumentWord(DocumentContainer dc){
 		
-		wordList.clear();
+		dc.wordList.clear();
 		//tokenize the words in each document
-		for(String content : contentList){
+		for(String content : dc.contentList){
 			String[] words = content.trim().split(" +");
 
 			ArrayList<String> temp = new ArrayList<String>();
@@ -255,7 +246,7 @@ public class Indexer {
 				temp.add(word);
 			}			
 			//insert tokens into wordList
-			wordList.add(temp);
+			dc.wordList.add(temp);
 		}
 		
 		//delete the contents of contentList, freeing up resource
@@ -263,7 +254,7 @@ public class Indexer {
 		
 		//trying to deep copy the contents of wordList for indexing purpose
 		ArrayList<ArrayList<String>> temp_wordList = new ArrayList<ArrayList<String>>();
-		for(ArrayList<String> elmt_wordlist : wordList){
+		for(ArrayList<String> elmt_wordlist : dc.wordList){
 			temp_wordList.add(new ArrayList<String>());
 			ArrayList<String> str = temp_wordList.get(temp_wordList.size()-1);
 			for(String elmt_elmt_wordlist : elmt_wordlist){
@@ -276,7 +267,7 @@ public class Indexer {
 			while(!(temp_wordList.get(i).isEmpty())){
 				//take the first word
 				String word = temp_wordList.get(i).get(0);
-				if(TFList.containsKey(word)){
+				if(dc.invFile.containsKey(word)){
 					temp_wordList.get(i).remove(0);
 				}
 				else{
@@ -297,7 +288,7 @@ public class Indexer {
 							temp_wordList.get(idx_doc).removeAll(Collections.singleton(word)); //remove all occurrences of word in wordList_doc
 						}
 					}
-					TFList.put(word, InvFileTFList); //put to TFList HashTable
+					dc.invFile.put(word, InvFileTFList); //put to TFList HashTable
 				}
 			}
 		}
@@ -308,9 +299,9 @@ public class Indexer {
 	 * lists all the words in the queryList
 	 * <p>this method also calculates raw TF for each word in each query
 	 */
-	public static void listQueryWord(){
+	public static void listQueryWord(DocumentContainer dc){
 		
-		wordList.clear();
+		dc.wordList.clear();
 		//tokenize the words in each document
 		for(String content : queryList){
 			String[] words = content.trim().split(" +");
@@ -320,14 +311,14 @@ public class Indexer {
 				temp.add(word);
 			}			
 			//insert tokens into wordList
-			wordList.add(temp);
+			dc.wordList.add(temp);
 		}
 		
 		//delete the contents of contentList, freeing up resource
 		queryList.clear();
 		
 		//deep copy the contents of wordList for indexing purpose
-		ArrayList<ArrayList<String>> temp_wordList = new ArrayList<ArrayList<String>>(wordList);
+		ArrayList<ArrayList<String>> temp_wordList = new ArrayList<ArrayList<String>>(dc.wordList);
 		
 		//TODO update so it matches with the query tokenizing requierement
 		//enumerate words and its occurrence in the entire document file 
@@ -335,7 +326,7 @@ public class Indexer {
 			while(!(temp_wordList.get(i).isEmpty())){
 				//take the first word
 				String word = temp_wordList.get(i).get(0);
-				if(TFList.containsKey(word)){
+				if(dc.invFile.containsKey(word)){
 					temp_wordList.get(i).remove(0);
 				}
 				else{
@@ -356,7 +347,7 @@ public class Indexer {
 							temp_wordList.get(idx_doc).removeAll(Collections.singleton(word)); //remove all occurrences of word in wordList_doc
 						}
 					}
-					TFList.put(word, InvFileTFList); //put to TFList HashTable
+					dc.invFile.put(word, InvFileTFList); //put to TFList HashTable
 				}
 			}
 		}
@@ -367,12 +358,11 @@ public class Indexer {
 	 * calculates TF based on user's choice (Binary,Raw,Logarithmic,Augmented)
 	 * @param TFType TF calculation method
 	 */
-	public static void calculateTF(int TFType){
-		Set<String> words = TFList.keySet();
+	public static void calculateTF(int TFType, DocumentContainer dc){
+		Set<String> words = dc.invFile.keySet();
 		ArrayList<String> words_list = new ArrayList<String>(words);
-		Collections.sort(words_list);
 		for(String word : words_list){
-			ArrayList<InvFileTF> word_result = TFList.get(word);
+			ArrayList<InvFileTF> word_result = dc.invFile.get(word);
 			for(InvFileTF elmt : word_result){
 				//calculate TF
 				switch (TFType) {
@@ -398,17 +388,17 @@ public class Indexer {
 	/**
 	 * calculates IDF for each word in the document
 	 */
-	public static void calculateIDF(){
-		Set<String> words = TFList.keySet();
+	public static void calculateIDF(DocumentContainer dc){
+		Set<String> words = dc.invFile.keySet();
 		ArrayList<String> words_list = new ArrayList<String>(words);
 		Collections.sort(words_list);
 		for(String word : words_list){
-			ArrayList<InvFileTF> occurrence = TFList.get(word);
+			ArrayList<InvFileTF> occurrence = dc.invFile.get(word);
 			if(occurrence != null){
-				IDFList.add(Math.log10(titleList.size() / occurrence.size())); //add IDF value to IDFList
+				dc.IDFList.add(Math.log10(dc.titleList.size() / occurrence.size())); //add IDF value to IDFList
 			}
 			else{
-				IDFList.add(Math.log10(titleList.size() / 1));
+				dc.IDFList.add(Math.log10(dc.titleList.size() / 1));
 			}
 		}
 	}
@@ -416,52 +406,66 @@ public class Indexer {
 	/**
 	 * calculates the length of each document (using each word's final TF in each document) 
 	 */
-	public static void calculateDocLength(){
-		for (ArrayList<String> doc_words : wordList) { //get list of document string in wordList
+	public static void calculateDocLength(DocumentContainer dc){
+		for (ArrayList<String> doc_words : dc.wordList) { //get list of document string in wordList
 			Double sum_squareTF = (double) 0;
 			for (String word : doc_words){ //get list of words in each document
 				//search the TF for current word in TFList  
-				ArrayList<InvFileTF> word_invfiletf = TFList.get(word);
+				ArrayList<InvFileTF> word_invfiletf = dc.invFile.get(word);
 				for(InvFileTF invfiletf : word_invfiletf){
-					if((invfiletf.docnum - 1) == wordList.indexOf(doc_words)){ //if InvFileTF for the current word is found
+					if((invfiletf.docnum - 1) == dc.wordList.indexOf(doc_words)){ //if InvFileTF for the current word is found
 						sum_squareTF += (invfiletf.TF * invfiletf.TF); //square TF
 						break;
 					}
 				}
 			}
 			Double doc_length = Math.sqrt(sum_squareTF);
-			doclengthList.add(doc_length);
+			dc.doclengthList.add(doc_length);
 		}
 	}
 	
 	/**
-	 * apply normalization to current TF value of each word in each document
+	 * applies TF x IDF calculation as the weight of a word 
 	 */
-	public static void applyNormalization(){
-		Set<String> words = TFList.keySet();
+	public static void applyTFIDF(DocumentContainer dc){
+		Set<String> words = dc.invFile.keySet();
 		ArrayList<String> words_list = new ArrayList<String>(words);
+		Collections.sort(words_list);
 		for(String word : words_list){ //iterate through the list of words
-			ArrayList<InvFileTF> word_result = TFList.get(word);
+			ArrayList<InvFileTF> word_result = dc.invFile.get(word);
 			for(InvFileTF invfiletf : word_result){ //iterate through the list of InvFileTF of the current word
-				invfiletf.TF =  invfiletf.TF / doclengthList.get((invfiletf.docnum) - 1); //divide TF with document length
+				invfiletf.TF =  invfiletf.TF * dc.IDFList.get(words_list.indexOf(word)); //multiply TF by IDF
 			}
 		}
 	}
 	
-	public static void printResult(){
+	/**
+	 * applies normalization to current TF value of each word in each document
+	 */
+	public static void applyNormalization(DocumentContainer dc){
+		Set<String> words = dc.invFile.keySet();
+		ArrayList<String> words_list = new ArrayList<String>(words);
+		for(String word : words_list){ //iterate through the list of words
+			ArrayList<InvFileTF> word_result = dc.invFile.get(word);
+			for(InvFileTF invfiletf : word_result){ //iterate through the list of InvFileTF of the current word
+				invfiletf.TF =  invfiletf.TF / dc.doclengthList.get((invfiletf.docnum) - 1); //divide TF with document length
+			}
+		}
+	}
+	
+	public static void printResult(DocumentContainer dc){
 		System.out.println("Indexing result:");
 		PrintWriter writer;
 		try {
 			writer = new PrintWriter("out.txt");
 			/*BEGIN OF TEST*/
-			Set<String> words = TFList.keySet();
+			Set<String> words = dc.invFile.keySet();
 			ArrayList<String> words_list = new ArrayList<String>(words);
 			Collections.sort(words_list);
 			for(String word : words_list){
-				writer.println(word);
-				ArrayList<InvFileTF> word_result = TFList.get(word);
+				ArrayList<InvFileTF> word_result = dc.invFile.get(word);
 				for(InvFileTF elmt : word_result){
-					writer.println(elmt.docnum+"\t"+elmt.TF_raw+"\t"+elmt.TF);
+					writer.println(word+"\t"+elmt.docnum+"\t"+elmt.TF_raw+"\t"+dc.IDFList.get(words_list.indexOf(word))+"\t"+elmt.TF);
 				}
 			}
 			writer.println("maxTF = "+TF_max);
