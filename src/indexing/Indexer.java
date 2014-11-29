@@ -8,7 +8,6 @@ import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Set;
 
 public class Indexer {
@@ -29,10 +28,13 @@ public class Indexer {
 	static ArrayList<String> titleList = new ArrayList<String>(); //list of doc title
 	static ArrayList<String> authorList = new ArrayList<String>(); //list of doc author
 	static ArrayList<String> contentList = new ArrayList<String>(); //list of doc content
+	static ArrayList<Double> doclengthList = new ArrayList<Double>(); //list of document length
 	static ArrayList<String> stopwordList = new ArrayList<String>(); //list of stop words
-	static ArrayList<ArrayList<String>> wordList = new ArrayList<ArrayList<String>>(); //container for the word token in each doc/query
+	public static ArrayList<ArrayList<String>> wordList = new ArrayList<ArrayList<String>>(); //container for the word token in each doc/query
+	static ArrayList<Double> IDFList = new ArrayList<Double>(); //list of IDF (for each word)
 	//QUERY CONTAINERS
 	static ArrayList<String> queryList = new ArrayList<String>(); //list of queries
+	static ArrayList<Double> querylengthList = new ArrayList<Double>(); //list of query length
 	
 	//variables used in TF calculations
 	static int TF_max = 0; //maximum raw TF, used in Augmented TF calculation
@@ -41,7 +43,7 @@ public class Indexer {
 	//TODO integrate with GUI
 	public final static int DOCUMENT_BINARY_TF = 0;
 	public final static int DOCUMENT_RAW_TF = 1;
-	public final static int DOCUEMNT_LOG_TF = 2;
+	public final static int DOCUMENT_LOG_TF = 2;
 	public final static int DOCUMENT_AUGMENTED_TF = 3;
 	static boolean useDocumentIDF = false;
 	static boolean useDocumentNorm = false; //use normalization?
@@ -49,12 +51,13 @@ public class Indexer {
 	/*DATA STRUCTURE FOR INVERTED FILE*/
 	//key-value for TF entry (Raw TF and TF)
 	static HashMap<String, ArrayList<InvFileTF>> TFList = new HashMap<String, ArrayList<InvFileTF>>();
-	//list of IDF (per word)
-	static ArrayList<Double> IDFList = new ArrayList<Double>();
-	//list of "document length" (used in normalization)
-	static ArrayList<Double> NormList = new ArrayList<Double>();
 	
-	//parses the document file, extracting the required info from each document
+	/**
+	 * parses the document file, extracting the required info from each document
+	 * @param path file path
+	 * @param doc_or_query code to distinguish between document or query
+	 * @throws IOException
+	 */
 	public static void readFile(String path, int doc_or_query) throws IOException{
 		
 		//used for parsing process
@@ -173,8 +176,11 @@ public class Indexer {
 		br.close();
 	}
 	
-	//removes stop words in contentList based on a stop word list
-	public static void removeStopWord() throws IOException{
+	/**
+	 * removes stop words in contentList based on a stop word list
+	 * @throws IOException
+	 */
+	public static void removeDocStopWord() throws IOException{
 		//open the stop word file
 		BufferedReader br = new BufferedReader(new FileReader("res/stopword/1.txt"));
 		for(String line = br.readLine(); line != null; line = br.readLine()){
@@ -201,9 +207,42 @@ public class Indexer {
 		//delete the contents of stopwordList, freeing up resource
 		stopwordList.clear();
 	}
+	/**
+	 * removes stop words from queryList based on a stop word list
+	 * @throws IOException
+	 */
+	public static void removeQueryStopWord() throws IOException{
+		//open the stop word file
+		BufferedReader br = new BufferedReader(new FileReader("res/stopword/1.txt"));
+		for(String line = br.readLine(); line != null; line = br.readLine()){
+			if(line.length() > 2){
+				if((line.charAt(0) != '/') && (line.charAt(1) != '/')){ //skip comments
+					stopwordList.add(line.trim());
+				}
+			}
+			else{
+				stopwordList.add(line.trim());
+			}
+		}
+		br.close();
+		
+		//remove stop words from queryList
+		for(int i = 0; i < queryList.size(); i++){
+			String newcontent = queryList.get(i);	
+			for(String str_stopword : stopwordList){
+				newcontent = newcontent.replaceAll("\\b"+str_stopword+"\\b(?!-)", ""); //hyphen-separated words will be counted as one word
+			}
+			queryList.set(i, newcontent);
+		}
+		
+		//delete the contents of stopwordList, freeing up resource
+		stopwordList.clear();
+	}
 	
-	//lists all the words in the contentList, then finds the matching documents
-	//this method also calculates raw TF for each word in each matching document
+	/**
+	 * lists all the words in the contentList, then finds the matching documents
+	 * <p>this method also calculates raw TF for each word in each matching document
+	 */
 	public static void listDocumentWord(){
 		
 		wordList.clear();
@@ -220,10 +259,17 @@ public class Indexer {
 		}
 		
 		//delete the contents of contentList, freeing up resource
-		contentList.clear();
+		//contentList.clear();
 		
-		//deep copy the contents of wordList for indexing purpose
-		ArrayList<ArrayList<String>> temp_wordList = new ArrayList<ArrayList<String>>(wordList);
+		//trying to deep copy the contents of wordList for indexing purpose
+		ArrayList<ArrayList<String>> temp_wordList = new ArrayList<ArrayList<String>>();
+		for(ArrayList<String> elmt_wordlist : wordList){
+			temp_wordList.add(new ArrayList<String>());
+			ArrayList<String> str = temp_wordList.get(temp_wordList.size()-1);
+			for(String elmt_elmt_wordlist : elmt_wordlist){
+				str.add(elmt_elmt_wordlist);
+			}
+		}		
 		
 		//enumerate words and its occurrence in the entire document file 
 		for (int i = 0; i < temp_wordList.size(); i++) { 
@@ -242,7 +288,7 @@ public class Indexer {
 						if(occurrence > 0){ //if found in wordList
 							InvFileTF itemTF = new InvFileTF();
 							//set the attrib value of itemTF
-							itemTF.docnum = idx_doc+1;
+							itemTF.docnum = idx_doc+1; //for document numbering, using 1 as the first index
 							itemTF.TF_raw = occurrence;
 							if (itemTF.TF_raw > TF_max){
 								TF_max = itemTF.TF_raw; //set the new value for TF_max
@@ -255,10 +301,13 @@ public class Indexer {
 				}
 			}
 		}
+		
 	}
 	
-	//lists all the words in the queryList
-	//this method also calculates raw TF for each word in each query
+	/**
+	 * lists all the words in the queryList
+	 * <p>this method also calculates raw TF for each word in each query
+	 */
 	public static void listQueryWord(){
 		
 		wordList.clear();
@@ -314,7 +363,10 @@ public class Indexer {
 	}
 
 	
-	//calculates TF based on user's choice (Binary,Raw,Logarithmic,Augmented)
+	/**
+	 * calculates TF based on user's choice (Binary,Raw,Logarithmic,Augmented)
+	 * @param TFType TF calculation method
+	 */
 	public static void calculateTF(int TFType){
 		Set<String> words = TFList.keySet();
 		ArrayList<String> words_list = new ArrayList<String>(words);
@@ -330,7 +382,7 @@ public class Indexer {
 					case DOCUMENT_RAW_TF:
 						elmt.TF = elmt.TF_raw;
 						break;
-					case DOCUEMNT_LOG_TF:
+					case DOCUMENT_LOG_TF:
 						elmt.TF = 1 + Math.log10(elmt.TF_raw); //using base 10 logarithm
 						break;
 					case DOCUMENT_AUGMENTED_TF:
@@ -343,7 +395,9 @@ public class Indexer {
 		}
 	}
 	
-	//calculate IDF for each word
+	/**
+	 * calculates IDF for each word in the document
+	 */
 	public static void calculateIDF(){
 		Set<String> words = TFList.keySet();
 		ArrayList<String> words_list = new ArrayList<String>(words);
@@ -358,7 +412,42 @@ public class Indexer {
 			}
 		}
 	}
-		
+	
+	/**
+	 * calculates the length of each document (using each word's final TF in each document) 
+	 */
+	public static void calculateDocLength(){
+		for (ArrayList<String> doc_words : wordList) { //get list of document string in wordList
+			Double sum_squareTF = (double) 0;
+			for (String word : doc_words){ //get list of words in each document
+				//search the TF for current word in TFList  
+				ArrayList<InvFileTF> word_invfiletf = TFList.get(word);
+				for(InvFileTF invfiletf : word_invfiletf){
+					if((invfiletf.docnum - 1) == wordList.indexOf(doc_words)){ //if InvFileTF for the current word is found
+						sum_squareTF += (invfiletf.TF * invfiletf.TF); //square TF
+						break;
+					}
+				}
+			}
+			Double doc_length = Math.sqrt(sum_squareTF);
+			doclengthList.add(doc_length);
+		}
+	}
+	
+	/**
+	 * apply normalization to current TF value of each word in each document
+	 */
+	public static void applyNormalization(){
+		Set<String> words = TFList.keySet();
+		ArrayList<String> words_list = new ArrayList<String>(words);
+		for(String word : words_list){ //iterate through the list of words
+			ArrayList<InvFileTF> word_result = TFList.get(word);
+			for(InvFileTF invfiletf : word_result){ //iterate through the list of InvFileTF of the current word
+				invfiletf.TF =  invfiletf.TF / doclengthList.get((invfiletf.docnum) - 1); //divide TF with document length
+			}
+		}
+	}
+	
 	public static void printResult(){
 		System.out.println("Indexing result:");
 		PrintWriter writer;
