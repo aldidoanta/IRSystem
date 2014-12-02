@@ -10,6 +10,7 @@ import java.util.Collections;
 import java.util.Set;
 
 import core.DocumentContainer;
+import core.MainBackend;
 
 public class Indexer {
 	
@@ -465,10 +466,14 @@ public class Indexer {
 			for(String word : words_list){
 				ArrayList<InvFileTF> word_result = dc.invFile.get(word);
 				for(InvFileTF elmt : word_result){
-					writer.println(word+"\t"+elmt.docnum+"\t"+elmt.TF_raw+"\t"+dc.IDFList.get(words_list.indexOf(word))+"\t"+elmt.TF);
+					if(MainBackend.document_flagIDF == true){
+						writer.println(word+"\t"+elmt.docnum+"\t"+elmt.TF_raw+"\t"+dc.IDFList.get(words_list.indexOf(word))+"\t"+elmt.TF);
+					}
+					else{
+						writer.println(word+"\t"+elmt.docnum+"\t"+elmt.TF_raw+"\t"+"-"+"\t"+elmt.TF);
+					}
 				}
 			}
-			writer.println("maxTF = "+TF_max);
 			/*END OF TEST*/
 			writer.close();
 		} catch (FileNotFoundException e) {

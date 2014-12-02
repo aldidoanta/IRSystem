@@ -4,18 +4,17 @@ import indexing.Indexer;
 
 import java.io.IOException;
 
-public class Main {
+public class MainBackend {
 	
-	public static void main (String[] args) throws IOException{
+	public static boolean document_flagStopWord;
+	public static boolean document_flagTF;
+	public static boolean document_flagIDF;
+	public static boolean document_flagNormalization;
+	public static int document_TFType;
+	
+	public static void doMain () throws IOException{
 		
 		DocumentContainer dc = new DocumentContainer();
-		
-		boolean document_flagStopWord = true;
-		boolean document_flagTF  = true;
-		boolean document_flagIDF = true;
-		boolean document_flagNormalization = true;
-		
-		int TF_choice = Indexer.DOCUMENT_LOG_TF;
 		
 		Indexer.readFile(Indexer.PATH_DOCUMENT_ADI,Indexer.DOCUMENT,dc);
 		if(document_flagStopWord == true){
@@ -23,7 +22,7 @@ public class Main {
 		}
 		Indexer.listDocumentWord(dc);
 		if(document_flagTF == true){
-			Indexer.calculateTF(TF_choice,dc);
+			Indexer.calculateTF(document_TFType,dc);
 		}
 		else{
 			Indexer.calculateTF(Indexer.DOCUMENT_RAW_TF, dc); //default
