@@ -4,6 +4,7 @@ import indexing.Indexer;
 
 import java.io.IOException;
 
+import evaluation.Evaluator;
 import retrieval.SimilarityCalculator;
 
 public class MainBackend {
@@ -21,11 +22,23 @@ public class MainBackend {
 	
 	public static DocumentContainer dc = new DocumentContainer();
 	public static QueryContainer qc = new QueryContainer();
+	public static SimilarityCalculator sc;
+	public static Evaluator evaluator;
+	
+	
+	//constants for the path of the document files
+	public final static String PATH_DOCUMENT_ADI = "res/document/ADI/ADI.ALL";
+	public final static String PATH_QUERY_ADI = "res/document/ADI/ADI.QRY";
+	public final static String PATH_REL_ADI = "res/document/ADI/ADI.REL";
+	public final static String PATH_DOCUMENT_CISI = "res/document/CISI/CISI.ALL";
+	public final static String PATH_QUERY_CISI = "res/document/CACM/CISI.QRY";
+	public final static String PATH_DOCUMENT_CACM = "res/document/CACM/cacm.all";
+	public final static String PATH_QUERY_CACM = "res/document/CACM/query.text";
 	
 	public static void doIndexing () throws IOException{
 		
 		//Document Indexing Section
-		Indexer.readFile(Indexer.PATH_DOCUMENT_ADI,Indexer.DOCUMENT,dc,qc);
+		Indexer.readFile(PATH_DOCUMENT_ADI,Indexer.DOCUMENT,dc,qc);
 		if(document_flagStopWord == true){
 			Indexer.removeDocStopWord(dc);
 		}
@@ -46,7 +59,7 @@ public class MainBackend {
 		}
 		
 		//Query Indexing Section
-		Indexer.readFile(Indexer.PATH_QUERY_ADI,Indexer.QUERY,dc,qc);
+		Indexer.readFile(PATH_QUERY_ADI,Indexer.QUERY,dc,qc);
 		if(document_flagStopWord == true){
 			Indexer.removeQueryStopWord(qc);
 		}
@@ -69,9 +82,16 @@ public class MainBackend {
 //		Indexer.printResult_Query(dc, qc);
 	}
 	
+	//retrieval (similarity calculation)
 	public static void doRetrieval(){
-		SimilarityCalculator sc = new SimilarityCalculator();
+		sc = new SimilarityCalculator();
 		sc.calculateSimilarity(dc, qc);
-		sc.printSimilarity();
+//		sc.printSimilarity();
+	}
+	
+	public static void doEvaluation(){
+		evaluator = new Evaluator();
+		evaluator.readRelevanceJudgement(PATH_REL_ADI);
+		evaluator.calculateEvaluation(sc);
 	}
 }

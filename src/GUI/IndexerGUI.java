@@ -31,11 +31,6 @@ public class IndexerGUI extends Composite {
 		
 		super(parent, style);
 		setLayout(new GridLayout(3, false));
-		
-		Label lblNewLabel = new Label(this, SWT.NONE);
-		lblNewLabel.setText("Indexing");
-		new Label(this, SWT.NONE);
-		new Label(this, SWT.NONE);
 		new Label(this, SWT.NONE);
 		new Label(this, SWT.NONE);
 		new Label(this, SWT.NONE);

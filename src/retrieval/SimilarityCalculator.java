@@ -99,7 +99,7 @@ public class SimilarityCalculator {
 					docsimtuple_list.add(docsimtuple);
 				}
 			}
-			similarityResult.put(qc.wordList.indexOf(arr_query), docsimtuple_list);  //using indexOf(arr_query)+1 because the query numbering begins at 1
+			similarityResult.put((qc.wordList.indexOf(arr_query))+1, docsimtuple_list);  //using indexOf(arr_query)+1 because the query numbering begins at 1
 		}
 	}
 	
@@ -107,10 +107,10 @@ public class SimilarityCalculator {
 		System.out.println("start print");
 		Set<Integer> queryNumbers = similarityResult.keySet();
 		ArrayList<Integer> queryNumberList = new ArrayList<Integer>(queryNumbers);
-		for(int queryNumber = 0; queryNumber < queryNumberList.size(); queryNumber++){ //list of query numbers
+		for(int queryNumber = 1; queryNumber <= queryNumberList.size(); queryNumber++){ //list of query numbers
 			ArrayList<DocSimTuple> docsimtuple_list = similarityResult.get(queryNumber);
 			for(int i = 0; i < docsimtuple_list.size(); i++){
-				System.out.println((queryNumber+1)+"\t"+docsimtuple_list.get(i).docnumber+"\t"+docsimtuple_list.get(i).sim);
+				System.out.println((queryNumber)+"\t"+docsimtuple_list.get(i).docnumber+"\t"+docsimtuple_list.get(i).sim);
 			}
 		}
 		System.out.println("end print");

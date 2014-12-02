@@ -57,6 +57,13 @@ public class MainGUI {
 			RetrievalGUI retrievalGUI = new RetrievalGUI(tabFolder, SWT.NONE);
 			tab_retrieval.setControl(retrievalGUI);
 			
+			//tab 4 - evaluation
+			TabItem tab_evaluation = new TabItem(tabFolder, SWT.NONE);
+			tab_evaluation.setText("Evaluation");
+			//evaluation composite
+			EvaluationGUI evaluationGUI = new EvaluationGUI(tabFolder, SWT.NONE);
+			tab_evaluation.setControl(evaluationGUI);
+			
 			shlIrsystem.open();
 			shlIrsystem.layout();
 			while (!shlIrsystem.isDisposed()) {
@@ -64,7 +71,6 @@ public class MainGUI {
 					display.sleep();
 				}
 			}
-			
 			
 			
 		} catch (Exception e) {

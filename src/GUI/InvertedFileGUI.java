@@ -52,7 +52,7 @@ public class InvertedFileGUI extends Composite {
 	    //table entries
 	    BufferedReader br;
 		try {
-			br = new BufferedReader(new FileReader("out.txt"));
+			br = new BufferedReader(new FileReader("invertedfile.txt"));
 			 String line;
 		    while ((line = br.readLine()) != null) {
 		       String[] tokens = line.split("\\s+");

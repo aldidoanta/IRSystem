@@ -15,13 +15,6 @@ import core.QueryContainer;
 
 public class Indexer {
 	
-	//constants for the path of the document files
-	public final static String PATH_DOCUMENT_ADI = "res/document/ADI/ADI.ALL";
-	public final static String PATH_QUERY_ADI = "res/document/ADI/ADI.QRY";
-	public final static String PATH_DOCUMENT_CISI = "res/document/CISI/CISI.ALL";
-	public final static String PATH_QUERY_CISI = "res/document/CACM/CISI.QRY";
-	public final static String PATH_DOCUMENT_CACM = "res/document/CACM/cacm.all";
-	public final static String PATH_QUERY_CACM = "res/document/CACM/query.text";
 	//constant representation for document and query
 	public final static int DOCUMENT = 1;
 	public final static int QUERY = 2;
@@ -572,7 +565,7 @@ public static void listQueryWord(QueryContainer qc){
 		System.out.println("Indexing result:");
 		PrintWriter writer;
 		try {
-			writer = new PrintWriter("out.txt");
+			writer = new PrintWriter("invertedfile_query.txt");
 			/*BEGIN OF TEST*/
 			Set<String> words = qc.invFile.keySet();
 			ArrayList<String> words_list = new ArrayList<String>(words);
