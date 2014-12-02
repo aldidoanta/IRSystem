@@ -31,11 +31,15 @@ public class MainBackend {
 	public final static String PATH_QUERY_ADI = "res/document/ADI/ADI.QRY";
 	public final static String PATH_REL_ADI = "res/document/ADI/ADI.REL";
 	public final static String PATH_DOCUMENT_CISI = "res/document/CISI/CISI.ALL";
-	public final static String PATH_QUERY_CISI = "res/document/CACM/CISI.QRY";
+	public final static String PATH_QUERY_CISI = "res/document/CISI/CISI.QRY";
+	public final static String PATH_REL_CISI = "res/document/CISI/CISI.REL";
 	public final static String PATH_DOCUMENT_CACM = "res/document/CACM/cacm.all";
 	public final static String PATH_QUERY_CACM = "res/document/CACM/query.text";
+	public final static String PATH_REL_CACM = "res/document/CACM/qrels.text";
 	
 	public static void doIndexing () throws IOException{
+		
+		System.out.println("Start indexing");
 		
 		//Document Indexing Section
 		Indexer.readFile(PATH_DOCUMENT_ADI,Indexer.DOCUMENT,dc,qc);
@@ -80,18 +84,23 @@ public class MainBackend {
 		}
 		Indexer.printResult(dc);
 //		Indexer.printResult_Query(dc, qc);
+		System.out.println("finish indexing");
 	}
 	
 	//retrieval (similarity calculation)
 	public static void doRetrieval(){
+		System.out.println("Start retrieving");
 		sc = new SimilarityCalculator();
 		sc.calculateSimilarity(dc, qc);
 //		sc.printSimilarity();
+		System.out.println("Finish retrieving");
 	}
 	
 	public static void doEvaluation(){
+		System.out.println("Start evaluating");
 		evaluator = new Evaluator();
 		evaluator.readRelevanceJudgement(PATH_REL_ADI);
 		evaluator.calculateEvaluation(sc);
+		System.out.println("Finish evaluating");
 	}
 }

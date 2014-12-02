@@ -535,7 +535,7 @@ public static void listQueryWord(QueryContainer qc){
 	}
 	
 	public static void printResult(DocumentContainer dc){
-		System.out.println("Indexing result:");
+		//System.out.println("Indexing result:");
 		PrintWriter writer;
 		try {
 			writer = new PrintWriter("invertedfile.txt");

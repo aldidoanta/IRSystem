@@ -21,11 +21,17 @@ public class Evaluator {
 	public ArrayList<Integer> relDocs_Retrieved;
 	public ArrayList<Integer> retrievedDocs;
 	
+	public ArrayList<Float> recallList;
+	public ArrayList<Float> precisionList;
+	
 	public Evaluator(){
 		relList = new ArrayList<ArrayList<Integer>>();
 		relDocs_Total = new ArrayList<Integer>();
 		relDocs_Retrieved = new ArrayList<Integer>();
 		retrievedDocs = new ArrayList<Integer>();
+		
+		recallList = new ArrayList<Float>();
+		precisionList = new ArrayList<Float>();
 	}
 	
 	/**
@@ -98,6 +104,24 @@ public class Evaluator {
 			float precision = (float)current_relDocs_Retrieved / (float)current_retrievedDocs;
 			System.out.println("Recall: "+recall);
 			System.out.println("precision: "+precision+"\n");
+			
+			recallList.add(recall);
+			precisionList.add(precision);
 		}
+		//calculate average recall and precision
+		float recall_avg = 0;
+		for(Float recall_elmt : recallList){
+			recall_avg += recall_elmt;
+		}
+		recall_avg = recall_avg / recallList.size();
+		
+		float precision_avg = 0;
+		for(Float precision_elmt : precisionList){
+			precision_avg += precision_elmt;
+		}
+		precision_avg = precision_avg / precisionList.size();
+		
+		System.out.println("Average recall: "+recall_avg);
+		System.out.println("Average precision: "+precision_avg);
 	}
 }
