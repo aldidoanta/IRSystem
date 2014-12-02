@@ -8,6 +8,8 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Text;
 
+import core.MainBackend;
+
 public class RetrievalGUI extends Composite {
 	private Text text_file;
 	private Text text_manualinput;
@@ -46,6 +48,12 @@ public class RetrievalGUI extends Composite {
 		btnOpen.setText("Open...");
 		
 		Button btnRetrieve = new Button(this, SWT.PUSH);
+		btnRetrieve.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) {
+				MainBackend.doRetrieval();
+			}
+		});
 		btnRetrieve.setBounds(197, 218, 75, 25);
 		btnRetrieve.setText("Retrieve");
 		

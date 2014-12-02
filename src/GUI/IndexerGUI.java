@@ -136,10 +136,32 @@ public class IndexerGUI extends Composite {
 		final Button btnQueryTF = new Button(this, SWT.CHECK);
 		btnQueryTF.setText("TF");
 		
-		Button btnQueryIDF = new Button(this, SWT.CHECK);
+		final Button btnQueryIDF = new Button(this, SWT.CHECK);
+		btnQueryIDF.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) {
+				if(btnQueryIDF.getSelection()){
+					MainBackend.query_flagIDF = true;
+				}
+				else{
+					MainBackend.query_flagIDF = false;
+				}
+			}
+		});
 		btnQueryIDF.setText("IDF");
 		
-		Button btnQueryNorm = new Button(this, SWT.CHECK);
+		final Button btnQueryNorm = new Button(this, SWT.CHECK);
+		btnQueryNorm.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) {
+				if(btnQueryNorm.getSelection()){
+					MainBackend.query_flagNormalization = true;
+				}
+				else{
+					MainBackend.query_flagNormalization = false;
+				}
+			}
+		});
 		btnQueryNorm.setText("Normalisasi");
 		
 		//query TF checkbox's radiobutton group
@@ -147,11 +169,23 @@ public class IndexerGUI extends Composite {
 	    groupQueryTF.setLayout(new RowLayout(SWT.VERTICAL));
 	    
 	    final Button btnBinaryTf_2 = new Button(groupQueryTF, SWT.RADIO);
+	    btnBinaryTf_2.addSelectionListener(new SelectionAdapter() {
+	    	@Override
+	    	public void widgetSelected(SelectionEvent e) {
+	    		MainBackend.query_TFType = Indexer.DOCUMENT_BINARY_TF;
+	    	}
+	    });
 	    btnBinaryTf_2.setEnabled(false);
 	    btnBinaryTf_2.setSelection(true);
 	    btnBinaryTf_2.setText("Binary TF");
 	    
 	    final Button btnRawTf_2 = new Button(groupQueryTF, SWT.RADIO);
+	    btnRawTf_2.addSelectionListener(new SelectionAdapter() {
+	    	@Override
+	    	public void widgetSelected(SelectionEvent e) {
+	    		MainBackend.query_TFType = Indexer.DOCUMENT_RAW_TF;
+	    	}
+	    });
 	    btnRawTf_2.setEnabled(false);
 	    btnRawTf_2.setText("Raw TF");
 	    
@@ -160,12 +194,19 @@ public class IndexerGUI extends Composite {
 	    btnLogTf_2.addSelectionListener(new SelectionAdapter() {
 	    	@Override
 	    	public void widgetSelected(SelectionEvent e) {
+	    		MainBackend.query_TFType = Indexer.DOCUMENT_LOG_TF;
 	    	}
 	    });
 	    
 	    btnLogTf_2.setText("Log TF");
 	    
 	    final Button btnAugTf_2 = new Button(groupQueryTF, SWT.RADIO);
+	    btnAugTf_2.addSelectionListener(new SelectionAdapter() {
+	    	@Override
+	    	public void widgetSelected(SelectionEvent e) {
+	    		MainBackend.query_TFType = Indexer.DOCUMENT_AUGMENTED_TF;
+	    	}
+	    });
 	    btnAugTf_2.setEnabled(false);
 	    btnAugTf_2.setText("Augmented TF");
 		new Label(this, SWT.NONE);
@@ -200,7 +241,7 @@ public class IndexerGUI extends Composite {
 			@Override
 			public void widgetSelected(SelectionEvent e) {
 				try {
-					MainBackend.doMain();
+					MainBackend.doIndexing();
 					
 				} catch (IOException e1) {
 					// TODO Auto-generated catch block
@@ -252,6 +293,9 @@ public class IndexerGUI extends Composite {
 					btnRawTf_2.setEnabled(true);
 					btnLogTf_2.setEnabled(true);
 					btnAugTf_2.setEnabled(true);
+					
+					//backend
+					MainBackend.query_flagTF = true;
 				}
 				else{
 					groupQueryTF.setEnabled(false);
@@ -260,6 +304,9 @@ public class IndexerGUI extends Composite {
 					btnRawTf_2.setEnabled(false);
 					btnLogTf_2.setEnabled(false);
 					btnAugTf_2.setEnabled(false);
+					
+					//backend
+					MainBackend.query_flagTF = false;
 				}
 			}
 		});

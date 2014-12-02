@@ -11,6 +11,7 @@ import java.util.Set;
 
 import core.DocumentContainer;
 import core.MainBackend;
+import core.QueryContainer;
 
 public class Indexer {
 	
@@ -29,8 +30,6 @@ public class Indexer {
 	//DOCUMENT CONTAINERS
 	static ArrayList<String> stopwordList = new ArrayList<String>(); //list of stop words
 	//QUERY CONTAINERS
-	static ArrayList<String> queryList = new ArrayList<String>(); //list of queries
-	static ArrayList<Double> querylengthList = new ArrayList<Double>(); //list of query length
 	
 	//variables used in TF calculations
 	static int TF_max = 0; //maximum raw TF, used in Augmented TF calculation
@@ -50,7 +49,7 @@ public class Indexer {
 	 * @param doc_or_query code to distinguish between document or query
 	 * @throws IOException
 	 */
-	public static void readFile(String path, int doc_or_query, DocumentContainer dc) throws IOException{
+	public static void readFile(String path, int doc_or_query, DocumentContainer dc, QueryContainer qc) throws IOException{
 		
 		//used for parsing process
 		int idx = 0;
@@ -91,7 +90,7 @@ public class Indexer {
 						switch (line.charAt(1)) {
 							case 'I':
 								idx = Integer.parseInt(line.substring(3)); //assign current query number
-								queryList.add("");
+								qc.queryList.add("");
 								break;
 							case 'W':
 								status = 'W';
@@ -105,7 +104,7 @@ public class Indexer {
 				}
 			}
 			else{
-				String curr_line = line.replaceAll("[\\[\\](){},.;\"!?<>%]", ""); //trim punctuation
+				String curr_line = line.replaceAll("[\\[\\](){},.:;\"!?<>%/0-9-]", ""); //trim punctuation
 				curr_line = curr_line.toLowerCase(); //convert all characters to lower case
 				
 				switch (doc_or_query) {
@@ -147,11 +146,11 @@ public class Indexer {
 						switch (status) {
 							case 'W':
 								if(firstline){
-									queryList.set(idx-1,curr_line); //add a new content elmt
+									qc.queryList.set(idx-1,curr_line); //add a new content elmt
 									firstline = false;
 								}
 								else{
-									queryList.set(idx-1, queryList.get(idx-1)+" "+curr_line); //append to existing elmt
+									qc.queryList.set(idx-1, qc.queryList.get(idx-1)+" "+curr_line); //append to existing elmt
 								}
 								break;
 		
@@ -203,7 +202,7 @@ public class Indexer {
 	 * removes stop words from queryList based on a stop word list
 	 * @throws IOException
 	 */
-	public static void removeQueryStopWord() throws IOException{
+	public static void removeQueryStopWord(QueryContainer qc) throws IOException{
 		//open the stop word file
 		BufferedReader br = new BufferedReader(new FileReader("res/stopword/1.txt"));
 		for(String line = br.readLine(); line != null; line = br.readLine()){
@@ -219,12 +218,12 @@ public class Indexer {
 		br.close();
 		
 		//remove stop words from queryList
-		for(int i = 0; i < queryList.size(); i++){
-			String newcontent = queryList.get(i);	
+		for(int i = 0; i < qc.queryList.size(); i++){
+			String newcontent = qc.queryList.get(i);	
 			for(String str_stopword : stopwordList){
 				newcontent = newcontent.replaceAll("\\b"+str_stopword+"\\b(?!-)", ""); //hyphen-separated words will be counted as one word
 			}
-			queryList.set(i, newcontent);
+			qc.queryList.set(i, newcontent);
 		}
 		
 		//delete the contents of stopwordList, freeing up resource
@@ -300,11 +299,11 @@ public class Indexer {
 	 * lists all the words in the queryList
 	 * <p>this method also calculates raw TF for each word in each query
 	 */
-	public static void listQueryWord(DocumentContainer dc){
+public static void listQueryWord(QueryContainer qc){
 		
-		dc.wordList.clear();
+		qc.wordList.clear();
 		//tokenize the words in each document
-		for(String content : queryList){
+		for(String content : qc.queryList){
 			String[] words = content.trim().split(" +");
 
 			ArrayList<String> temp = new ArrayList<String>();
@@ -312,34 +311,37 @@ public class Indexer {
 				temp.add(word);
 			}			
 			//insert tokens into wordList
-			dc.wordList.add(temp);
+			qc.wordList.add(temp);
 		}
 		
-		//delete the contents of contentList, freeing up resource
-		queryList.clear();
+		//trying to deep copy the contents of wordList for indexing purpose
+		ArrayList<ArrayList<String>> temp_wordList = new ArrayList<ArrayList<String>>();
+		for(ArrayList<String> elmt_wordlist : qc.wordList){
+			temp_wordList.add(new ArrayList<String>());
+			ArrayList<String> str = temp_wordList.get(temp_wordList.size()-1);
+			for(String elmt_elmt_wordlist : elmt_wordlist){
+				str.add(elmt_elmt_wordlist);
+			}
+		}		
 		
-		//deep copy the contents of wordList for indexing purpose
-		ArrayList<ArrayList<String>> temp_wordList = new ArrayList<ArrayList<String>>(dc.wordList);
-		
-		//TODO update so it matches with the query tokenizing requierement
 		//enumerate words and its occurrence in the entire document file 
 		for (int i = 0; i < temp_wordList.size(); i++) { 
 			while(!(temp_wordList.get(i).isEmpty())){
 				//take the first word
 				String word = temp_wordList.get(i).get(0);
-				if(dc.invFile.containsKey(word)){
+				if(qc.invFile.containsKey(word)){
 					temp_wordList.get(i).remove(0);
 				}
 				else{
-					ArrayList<InvFileTF> InvFileTFList = new ArrayList<InvFileTF>();
+					ArrayList<InvFileTF_Query> InvFileTFList = new ArrayList<InvFileTF_Query>();
 					//create InvFileTF
 					for (int idx_doc = i; idx_doc < temp_wordList.size(); idx_doc++) {
 						ArrayList<String> examined_wordList_doc = temp_wordList.get(idx_doc);
 						int occurrence = Collections.frequency(examined_wordList_doc, word); 
 						if(occurrence > 0){ //if found in wordList
-							InvFileTF itemTF = new InvFileTF();
+							InvFileTF_Query itemTF = new InvFileTF_Query();
 							//set the attrib value of itemTF
-							itemTF.docnum = idx_doc+1;
+							itemTF.docnum = idx_doc+1; //for document numbering, using 1 as the first index
 							itemTF.TF_raw = occurrence;
 							if (itemTF.TF_raw > TF_max){
 								TF_max = itemTF.TF_raw; //set the new value for TF_max
@@ -348,10 +350,11 @@ public class Indexer {
 							temp_wordList.get(idx_doc).removeAll(Collections.singleton(word)); //remove all occurrences of word in wordList_doc
 						}
 					}
-					dc.invFile.put(word, InvFileTFList); //put to TFList HashTable
+					qc.invFile.put(word, InvFileTFList); //put to TFList HashTable
 				}
 			}
 		}
+		
 	}
 
 	
@@ -365,6 +368,33 @@ public class Indexer {
 		for(String word : words_list){
 			ArrayList<InvFileTF> word_result = dc.invFile.get(word);
 			for(InvFileTF elmt : word_result){
+				//calculate TF
+				switch (TFType) {
+					case DOCUMENT_BINARY_TF:
+						elmt.TF = 1; //its value will be always 1, because the word exists in the doc
+						break;
+					case DOCUMENT_RAW_TF:
+						elmt.TF = elmt.TF_raw;
+						break;
+					case DOCUMENT_LOG_TF:
+						elmt.TF = 1 + Math.log10(elmt.TF_raw); //using base 10 logarithm
+						break;
+					case DOCUMENT_AUGMENTED_TF:
+						elmt.TF = 0.5 + (0.5 * elmt.TF_raw / TF_max);
+						break;
+					default:
+						break;
+				}
+			}
+		}
+	}
+	
+	public static void calculateTF_Query(int TFType, QueryContainer qc){
+		Set<String> words = qc.invFile.keySet();
+		ArrayList<String> words_list = new ArrayList<String>(words);
+		for(String word : words_list){
+			ArrayList<InvFileTF_Query> word_result = qc.invFile.get(word);
+			for(InvFileTF_Query elmt : word_result){
 				//calculate TF
 				switch (TFType) {
 					case DOCUMENT_BINARY_TF:
@@ -426,6 +456,27 @@ public class Indexer {
 	}
 	
 	/**
+	 * calculates the length of each query (using each word's final TF in each query) 
+	 */
+	public static void calculateQueryLength(QueryContainer qc){
+		for (ArrayList<String> doc_words : qc.wordList) { //get list of query string in wordList
+			Double sum_squareTF = (double) 0;
+			for (String word : doc_words){ //get list of words in each document
+				//search the TF for current word in TFList  
+				ArrayList<InvFileTF_Query> word_invfiletf = qc.invFile.get(word);
+				for(InvFileTF_Query invfiletf : word_invfiletf){
+					if((invfiletf.docnum - 1) == qc.wordList.indexOf(doc_words)){ //if InvFileTF for the current word is found
+						sum_squareTF += (invfiletf.TF * invfiletf.TF); //square TF
+						break;
+					}
+				}
+			}
+			Double doc_length = Math.sqrt(sum_squareTF);
+			qc.querylengthList.add(doc_length);
+		}
+	}
+	
+	/**
 	 * applies TF x IDF calculation as the weight of a word 
 	 */
 	public static void applyTFIDF(DocumentContainer dc){
@@ -436,6 +487,28 @@ public class Indexer {
 			ArrayList<InvFileTF> word_result = dc.invFile.get(word);
 			for(InvFileTF invfiletf : word_result){ //iterate through the list of InvFileTF of the current word
 				invfiletf.TF =  invfiletf.TF * dc.IDFList.get(words_list.indexOf(word)); //multiply TF by IDF
+			}
+		}
+	}
+	
+	/**
+	 * applies TF x IDF calculation as the weight of a word 
+	 */
+	public static void applyTFIDF_Query(DocumentContainer dc, QueryContainer qc){
+		Set<String> words = qc.invFile.keySet();
+		ArrayList<String> words_list = new ArrayList<String>(words);
+		Collections.sort(words_list);
+		for(String word : words_list){ //iterate through the list of words
+			ArrayList<InvFileTF_Query> word_result = qc.invFile.get(word);
+			for(InvFileTF_Query invfiletf : word_result){ //iterate through the list of InvFileTF_Query of the current word
+				double IDF = 0;
+				if(dc.invFile.get(word) != null){
+					IDF = dc.IDFList.get(words_list.indexOf(word));
+				}
+				else{
+					IDF = 0;
+				}
+				invfiletf.TF =  invfiletf.TF * IDF; //multiply TF by IDF
 			}
 		}
 	}
@@ -454,11 +527,25 @@ public class Indexer {
 		}
 	}
 	
+	/**
+	 * applies normalization to current TF value of each word in each query
+	 */
+	public static void applyNormalization_Query(QueryContainer qc){
+		Set<String> words = qc.invFile.keySet();
+		ArrayList<String> words_list = new ArrayList<String>(words);
+		for(String word : words_list){ //iterate through the list of words
+			ArrayList<InvFileTF_Query> word_result = qc.invFile.get(word);
+			for(InvFileTF_Query invfiletf : word_result){ //iterate through the list of InvFileTF of the current word
+				invfiletf.TF =  invfiletf.TF / qc.querylengthList.get((invfiletf.docnum) - 1); //divide TF with document length
+			}
+		}
+	}
+	
 	public static void printResult(DocumentContainer dc){
 		System.out.println("Indexing result:");
 		PrintWriter writer;
 		try {
-			writer = new PrintWriter("out.txt");
+			writer = new PrintWriter("invertedfile.txt");
 			/*BEGIN OF TEST*/
 			Set<String> words = dc.invFile.keySet();
 			ArrayList<String> words_list = new ArrayList<String>(words);
@@ -481,11 +568,25 @@ public class Indexer {
 		}
 	}
 	
-	public static void printQueryList(){
-		System.out.println("query list\n\n");
-		for (String query : queryList) {
-			System.out.println(query);
+	public static void printResult_Query(DocumentContainer dc, QueryContainer qc){
+		System.out.println("Indexing result:");
+		PrintWriter writer;
+		try {
+			writer = new PrintWriter("out.txt");
+			/*BEGIN OF TEST*/
+			Set<String> words = qc.invFile.keySet();
+			ArrayList<String> words_list = new ArrayList<String>(words);
+			Collections.sort(words_list);
+			for(String word : words_list){
+				ArrayList<InvFileTF_Query> word_result = qc.invFile.get(word);
+				for(InvFileTF_Query elmt : word_result){
+					writer.println(word+"\t"+elmt.docnum+"\t"+elmt.TF_raw+"\t"+"-"+"\t"+elmt.TF);
+				}
+			}
+			/*END OF TEST*/
+			writer.close();
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
 		}
-		System.out.println("\n\nsize= "+queryList.size());
 	}
 }
